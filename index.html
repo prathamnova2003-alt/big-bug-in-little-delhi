@@ -227,6 +227,14 @@ const BRICK_PICKUP_POSITIONS = [
   [8500, 7500],
 ];
 
+/* Checkpoint — purely decorative animated landmark in area 8, no gameplay
+   effect. Sized 2x the hero, cycles through the source GIF's 22 frames at
+   its native ~50ms/frame speed. */
+const CHECKPOINT_SIZE = HERO_SIZE * 2;
+const CHECKPOINT_FRAME_COUNT = 22;
+const CHECKPOINT_FRAME_MS = 50;
+const CHECKPOINT_POS = {x: 8050, y: 2750};
+
 /* ============================== WALLS ============================== */
 /* Precise wall geometry — traced directly from the user's annotated floor
    map (blue lines = walls, yellow marks = doorway gaps), rasterized into a
@@ -282,6 +290,7 @@ let camera = {x:0, y:0};
 
 let images = {};
 let heroFrames = [];
+let checkpointFrames = [];
 
 /* Offscreen buffer reused for masked hurt-tint rendering */
 let tintCanvas = document.createElement('canvas');
@@ -321,6 +330,12 @@ async function loadAllImages(){
   }
   heroFrames = [];
   for (const n of frameNames){ heroFrames.push(await loadImage(n)); }
+
+  // Checkpoint animation — 22 frames
+  checkpointFrames = [];
+  for (let i=1;i<=CHECKPOINT_FRAME_COUNT;i++){
+    checkpointFrames.push(await loadImage('checkpoint_' + String(i).padStart(2,'0') + '.png'));
+  }
 }
 
 /* ============================== UTIL ============================== */
@@ -838,6 +853,17 @@ function render(){
     ctx.restore();
     if (images['brick.png']) ctx.drawImage(images['brick.png'], p.x-ps/2, p.y+bob2-ps/2, ps, ps);
     else { ctx.fillStyle = '#b5541e'; ctx.fillRect(p.x-ps/2, p.y+bob2-ps/2, ps, ps); }
+  }
+
+  // checkpoint — decorative animated landmark, no collision/effect
+  {
+    const cp = worldToScreen(CHECKPOINT_POS.x, CHECKPOINT_POS.y);
+    if (cp.x > -CHECKPOINT_SIZE && cp.x < w+CHECKPOINT_SIZE && cp.y > -CHECKPOINT_SIZE && cp.y < h+CHECKPOINT_SIZE){
+      const frameIdx = Math.floor(now() / CHECKPOINT_FRAME_MS) % CHECKPOINT_FRAME_COUNT;
+      const cpImg = checkpointFrames[frameIdx];
+      const cs = CHECKPOINT_SIZE * zoom;
+      if (cpImg) ctx.drawImage(cpImg, cp.x-cs/2, cp.y-cs/2, cs, cs);
+    }
   }
 
   // projectiles (stone or brick, whichever the hero currently has equipped)
