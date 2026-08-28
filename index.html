@@ -186,14 +186,9 @@ const PICKUP_RADIUS = 110;
    the earlier "triple the FOV" sizing (previously 150*18=2700). */
 const FOV_WORLD_WIDTH = 2700;
 
-/* Hero shadow — same pixelated-particle rendering style as the rat mist,
-   but dark/opaque and anchored in a static puddle under the body instead
-   of spraying outward. Many small, tightly-packed particles (rather than
-   few large sparse ones) so it reads as a solid shadow shape instead of
-   a scattered halo of blocks. */
-const SHADOW_PARTICLE_COUNT = 110;
-const SHADOW_COLOR = '#040404';
-const SHADOW_ALPHA = 0.8;
+/* Hero shadow — baked directly into the hero_walk sprite frames (matching
+   what the user painted onto a reference frame), rather than rendered as a
+   separate procedural layer. */
 
 /* Areas — approximate rectangular zoning of the 10000x10000 floor map,
    derived from the original photo-collage layout. id 7 spans two rects.
@@ -348,29 +343,12 @@ function resetGame(){
     moving:false,
     weapon: 'stone',
     animFrame: 0,
-    animTimer: 0,
-    shadowParticles: []
+    animTimer: 0
   };
   bricks = [];
   enemies = [];
   score = 0;
   areaStates = {};
-
-  // Generate a static pixelated shadow "puddle" under the hero — an ellipse
-  // of dark squares, offset slightly below body center to read as a shadow
-  // cast from directly overhead.
-  hero.shadowParticles = [];
-  for (let i=0;i<SHADOW_PARTICLE_COUNT;i++){
-    const ang = Math.random()*Math.PI*2;
-    const r = Math.sqrt(Math.random());
-    const ex = Math.cos(ang) * r * HERO_SIZE*0.15;
-    const ey = Math.sin(ang) * r * HERO_SIZE*0.10 + HERO_SIZE*0.17;
-    hero.shadowParticles.push({
-      dx: ex, dy: ey,
-      size: randRange(9,15),
-      phase: Math.random()*Math.PI*2
-    });
-  }
 
   rats = RAT_POSITIONS.map(([x,y])=>({
     x, y,
@@ -851,22 +829,7 @@ function render(){
     ctx.restore();
   }
 
-  // hero shadow — dark pixelated puddle, drawn first so hero sits on top
-  const prevSmoothing2 = ctx.imageSmoothingEnabled;
-  ctx.imageSmoothingEnabled = false;
-  for (const sp of hero.shadowParticles){
-    const wx = hero.x + sp.dx, wy = hero.y + sp.dy;
-    const sp2 = worldToScreen(wx, wy);
-    const pulse = 1 + 0.06*Math.sin(now()/260 + sp.phase);
-    const psize = Math.max(2, sp.size*zoom*pulse);
-    ctx.globalAlpha = SHADOW_ALPHA;
-    ctx.fillStyle = SHADOW_COLOR;
-    ctx.fillRect(Math.round(sp2.x-psize/2), Math.round(sp2.y-psize/2), Math.ceil(psize), Math.ceil(psize));
-  }
-  ctx.globalAlpha = 1;
-  ctx.imageSmoothingEnabled = prevSmoothing2;
-
-  // hero (cockroach walk-cycle)
+  // hero (cockroach walk-cycle — shadow is baked into the sprite frames)
   const heroAngle = Math.atan2(hero.facing.y, hero.facing.x) * 180/Math.PI + 90;
   const bob = hero.moving ? 0 : Math.sin(now()/500)*1.5*zoom*0.3;
   const hp = worldToScreen(hero.x, hero.y);
