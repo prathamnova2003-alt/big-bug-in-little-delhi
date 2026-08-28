@@ -186,6 +186,13 @@ const PICKUP_RADIUS = 110;
    the earlier "triple the FOV" sizing (previously 150*18=2700). */
 const FOV_WORLD_WIDTH = 2700;
 
+/* Hero shadow — same pixelated-particle rendering style as the rat mist,
+   but dark/opaque and anchored in a static puddle under the body instead
+   of spraying outward. */
+const SHADOW_PARTICLE_COUNT = 40;
+const SHADOW_COLOR = '#040404';
+const SHADOW_ALPHA = 0.82;
+
 /* Wall doorway gap width (world units) — a fixed size, generous enough for
    the hero to pass through comfortably. NOT scaled with HERO_SIZE: several
    of the smaller rooms are barely wider than 1000 units, so tying this to
@@ -387,12 +394,29 @@ function resetGame(){
     moving:false,
     weapon: 'stone',
     animFrame: 0,
-    animTimer: 0
+    animTimer: 0,
+    shadowParticles: []
   };
   bricks = [];
   enemies = [];
   score = 0;
   areaStates = {};
+
+  // Generate a static pixelated shadow "puddle" under the hero — an ellipse
+  // of dark squares, offset slightly below body center to read as a shadow
+  // cast from directly overhead.
+  hero.shadowParticles = [];
+  for (let i=0;i<SHADOW_PARTICLE_COUNT;i++){
+    const ang = Math.random()*Math.PI*2;
+    const r = Math.sqrt(Math.random());
+    const ex = Math.cos(ang) * r * HERO_SIZE*0.42;
+    const ey = Math.sin(ang) * r * HERO_SIZE*0.24 + HERO_SIZE*0.16;
+    hero.shadowParticles.push({
+      dx: ex, dy: ey,
+      size: randRange(14,26),
+      phase: Math.random()*Math.PI*2
+    });
+  }
 
   rats = RAT_POSITIONS.map(([x,y])=>({
     x, y,
@@ -872,6 +896,21 @@ function render(){
     }
     ctx.restore();
   }
+
+  // hero shadow — dark pixelated puddle, drawn first so hero sits on top
+  const prevSmoothing2 = ctx.imageSmoothingEnabled;
+  ctx.imageSmoothingEnabled = false;
+  for (const sp of hero.shadowParticles){
+    const wx = hero.x + sp.dx, wy = hero.y + sp.dy;
+    const sp2 = worldToScreen(wx, wy);
+    const pulse = 1 + 0.06*Math.sin(now()/260 + sp.phase);
+    const psize = Math.max(2, sp.size*zoom*pulse);
+    ctx.globalAlpha = SHADOW_ALPHA;
+    ctx.fillStyle = SHADOW_COLOR;
+    ctx.fillRect(Math.round(sp2.x-psize/2), Math.round(sp2.y-psize/2), Math.ceil(psize), Math.ceil(psize));
+  }
+  ctx.globalAlpha = 1;
+  ctx.imageSmoothingEnabled = prevSmoothing2;
 
   // hero (cockroach walk-cycle)
   const heroAngle = Math.atan2(hero.facing.y, hero.facing.x) * 180/Math.PI + 90;
