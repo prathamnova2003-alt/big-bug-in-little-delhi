@@ -9,36 +9,15 @@
   html, body { width:100%; height:100%; overflow:hidden; background:#000; font-family: 'Segoe UI', system-ui, sans-serif; }
   #gameContainer { position:relative; width:100vw; height:100vh; overflow:hidden; }
 
-  canvas { position:absolute; top:0; left:0; display:block; }
+  canvas { position:absolute; top:0; left:0; display:block; image-rendering: auto; }
 
   .screen { position:absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background-size:cover; background-position:center; }
   .hidden { display:none !important; }
 
   #homeScreen { background-image:url('./homescreen.jpg'); }
-  #homeOverlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.25); }
+  #homeOverlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.2); }
 
-  .title {
-    position:relative;
-    color:#fff;
-    font-size:clamp(28px, 8vw, 56px);
-    font-weight:900;
-    letter-spacing:1px;
-    text-align:center;
-    text-shadow: 3px 3px 0 #ff1e1e, -1px -1px 0 #000;
-    margin-bottom:40px;
-    animation: shake 3.5s infinite;
-    padding:0 20px;
-  }
-  @keyframes shake {
-    0%,92%,100% { transform: translate(0,0) rotate(0deg); }
-    93% { transform: translate(-2px,1px) rotate(-1deg); }
-    94% { transform: translate(2px,-1px) rotate(1deg); }
-    95% { transform: translate(-1px,2px) rotate(0deg); }
-    96% { transform: translate(1px,-2px) rotate(1deg); }
-    97% { transform: translate(0,0) rotate(0deg); }
-  }
-
-  .menuBtn { position:relative; cursor:pointer; border:none; background:none; padding:0; margin:10px 0; display:block; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); transition: transform 0.1s; }
+  .menuBtn { position:relative; cursor:pointer; border:none; background:none; padding:0; margin:10px 0; display:block; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); transition: transform 0.1s; z-index:2; }
   .menuBtn img { width: min(60vw, 320px); display:block; }
   .menuBtn:active { transform: scale(0.94); }
 
@@ -72,29 +51,20 @@
   #gameScreen.active { display:block; }
 
   #hud { position:absolute; top:0; left:0; width:100%; padding:12px 16px; display:flex; justify-content:space-between; align-items:flex-start; z-index:5; pointer-events:none; }
-  #hpWrap { background:rgba(0,0,0,0.5); border-radius:8px; padding:6px 10px; }
+  #hpWrap { background:rgba(0,0,0,0.45); border-radius:8px; padding:6px 10px; backdrop-filter: blur(2px); }
   #hpLabel { color:#fff; font-size:12px; letter-spacing:1px; margin-bottom:3px; }
-  #hpBarBg { width:140px; height:14px; background:#3a0000; border-radius:7px; overflow:hidden; border:1px solid #fff; }
+  #hpBarBg { width:140px; height:14px; background:#3a0000; border-radius:7px; overflow:hidden; border:1px solid rgba(255,255,255,0.6); }
   #hpBarFill { height:100%; background:linear-gradient(90deg,#ff2b2b,#ff6a00); width:100%; transition: width 0.15s; }
-  #scoreWrap { background:rgba(0,0,0,0.5); border-radius:8px; padding:6px 12px; color:#fff; font-size:14px; font-weight:700; }
+  #scoreWrap { background:rgba(0,0,0,0.45); border-radius:8px; padding:6px 12px; color:#fff; font-size:14px; font-weight:700; backdrop-filter: blur(2px); }
 
-  #joystickBase {
-    position:absolute; width:110px; height:110px; border-radius:50%;
-    background:rgba(255,255,255,0.12); border:3px solid rgba(255,255,255,0.4);
-    z-index:6;
+  /* Invisible full-half control zones — no visible buttons.
+     Left half = drag-to-move floating joystick. Right half = tap/hold to throw. */
+  #moveZone {
+    position:absolute; left:0; top:0; width:50%; height:100%; z-index:6; touch-action:none;
   }
-  #joystickKnob {
-    position:absolute; width:50px; height:50px; border-radius:50%;
-    background:rgba(255,30,30,0.7); border:2px solid #fff;
-    left:30px; top:30px;
+  #throwZone {
+    position:absolute; right:0; top:0; width:50%; height:100%; z-index:6; touch-action:none;
   }
-  #throwBtn {
-    position:absolute; width:90px; height:90px; border-radius:50%;
-    background:rgba(255,30,30,0.55); border:3px solid #fff; color:#fff;
-    font-weight:900; font-size:14px; display:flex; align-items:center; justify-content:center;
-    z-index:6; letter-spacing:1px; text-align:center;
-  }
-  #throwBtn:active { background:rgba(255,30,30,0.85); }
 
   #gameOverScreen {
     position:absolute; top:0; left:0; width:100%; height:100%; z-index:25;
@@ -103,12 +73,6 @@
   #gameOverScreen.active { display:flex; }
   #gameOverScreen h1 { color:#ff2b2b; font-size:clamp(30px,8vw,54px); margin-bottom:6px; letter-spacing:2px; }
   #finalScore { color:#fff; font-size:20px; margin-bottom:26px; }
-
-  #areaFlash {
-    position:absolute; top:14%; left:50%; transform:translate(-50%,-50%);
-    color:#fff; font-size:15px; letter-spacing:3px; opacity:0; z-index:7;
-    text-shadow:2px 2px 4px #000; pointer-events:none; transition:opacity 0.4s;
-  }
 </style>
 </head>
 <body>
@@ -119,8 +83,8 @@
   <div id="homeScreen" class="screen">
     <div id="homeOverlay"></div>
     <div style="position:relative; display:flex; flex-direction:column; align-items:center; z-index:2;">
-      <div class="title">DICK'S HOUSE<br>DEFENCE</div>
       <button class="menuBtn" id="playBtn"><img src="./btn_play.png" alt="Play"></button>
+      <button class="menuBtn" id="replayBtnHome"><img src="./btn_replay.png" alt="Replay"></button>
       <button class="menuBtn" id="settingBtn"><img src="./btn_setting.png" alt="Settings"></button>
     </div>
   </div>
@@ -149,10 +113,8 @@
       <div id="scoreWrap">KILLS: <span id="scoreVal">0</span></div>
     </div>
 
-    <div id="areaFlash"></div>
-
-    <div id="joystickBase"><div id="joystickKnob"></div></div>
-    <div id="throwBtn">THROW</div>
+    <div id="moveZone"></div>
+    <div id="throwZone"></div>
   </div>
 
   <!-- GAME OVER -->
@@ -165,8 +127,8 @@
 
 </div>
 
-<!-- Audio hooks — placeholder <audio> tags. Drop real files into ./ with these exact
-     names later and they'll just start working; no code changes needed. -->
+<!-- Audio hooks — placeholder <audio> tags. Drop real files into this same folder later
+     with these exact names and they'll just start working; no code changes needed. -->
 <audio id="sndIntro" loop preload="none"><source src="./intro.mp3" type="audio/mpeg"></audio>
 <audio id="sndThrow" preload="none"><source src="./throw.mp3" type="audio/mpeg"></audio>
 <audio id="sndEnemyDeath" preload="none"><source src="./enemy_death.mp3" type="audio/mpeg"></audio>
@@ -178,55 +140,130 @@
 "use strict";
 
 /* ============================== CONFIG ============================== */
-const WORLD_SIZE = 1600;
-const HERO_SIZE = 30;
-const HERO_SPEED = 150;            // px/sec
-const BRICK_SIZE = 26;
+const WORLD_SIZE = 10000;
+
+/* Entity sizes/speeds — 5x the values from the original 1600-map prototype.
+   These are independent of WORLD_SIZE; camera zoom (below) is what makes
+   everything read as "big" on screen regardless of map scale. */
+const HERO_SIZE = 150;
+const HERO_SPEED = 750;
+const BRICK_SIZE = 130;
 const BRICK_SPEED = HERO_SPEED * 2;
 const BRICK_SPIN_DEG_PER_SEC = 900;
-const BRICK_MAX_DIST = 700;
-const ENEMY_SIZE = 32;
-const ENEMY_SPEED = 65;
+const BRICK_MAX_DIST = 3500;
+const ENEMY_SIZE = 160;
+const ENEMY_SPEED = 325;
 const ENEMY_TOUCH_DAMAGE = 1;
 const ENEMY_TOUCH_COOLDOWN = 1000; // ms
-const RAT_SIZE = 20;
-const RAT_MIST_RADIUS = 96;        // ~3 blocks (32px block)
-const RAT_BODY_RADIUS = 16;
+const RAT_SIZE = 100;
+const RAT_MIST_RADIUS = 480;
+const RAT_BODY_RADIUS = 80;
 const RAT_MIST_ENTER_DAMAGE = 3;
 const RAT_MIST_DPS = 2;
 const HERO_MAX_HP = 10;
 const AREA_SPAWN_TICK_MS = 10000;  // every 10 seconds
-const HURT_FLASH_MS = 220;
+const HURT_FLASH_MS = 260;
 
-/* Areas — approximate rectangular zoning of the 1600x1600 floor map,
+/* Camera / zoom — tight FOV so the world feels huge and entities feel big.
+   Visible world-width on screen = 6x the hero's diameter. */
+const FOV_WORLD_WIDTH = HERO_SIZE * 6;
+
+/* Wall doorway gap width (world units) — how wide the passable opening is
+   in each dividing wall between areas. */
+const WALL_GAP = HERO_SIZE * 3;
+const WALL_THICKNESS = 60;
+
+/* Areas — approximate rectangular zoning of the 10000x10000 floor map,
    derived from the original photo-collage layout. id 7 spans two rects. */
 const AREAS = [
-  {id:1, x:0,    y:650,  w:975, h:950},
-  {id:2, x:0,    y:345,  w:975, h:305},
-  {id:3, x:0,    y:0,    w:975, h:345},
-  {id:8, x:975,  y:0,    w:625, h:880},
-  {id:6, x:975,  y:880,  w:165, h:100},
-  {id:5, x:975,  y:980,  w:165, h:90},
-  {id:4, x:975,  y:1070, w:165, h:90},
-  {id:7, x:1140, y:880,  w:460, h:720},
-  {id:7, x:975,  y:1160, w:165, h:440},
+  {"id":1, "x":0.0, "y":4062.5, "w":6093.8, "h":5937.5},
+  {"id":2, "x":0.0, "y":2156.2, "w":6093.8, "h":1906.2},
+  {"id":3, "x":0.0, "y":0.0, "w":6093.8, "h":2156.2},
+  {"id":8, "x":6093.8, "y":0.0, "w":3906.2, "h":5500.0},
+  {"id":6, "x":6093.8, "y":5500.0, "w":1031.2, "h":625.0},
+  {"id":5, "x":6093.8, "y":6125.0, "w":1031.2, "h":562.5},
+  {"id":4, "x":6093.8, "y":6687.5, "w":1031.2, "h":562.5},
+  {"id":7, "x":7125.0, "y":5500.0, "w":2875.0, "h":4500.0},
+  {"id":7, "x":6093.8, "y":7250.0, "w":1031.2, "h":2750.0}
 ];
 
-const SPAWN_POINT = {x:245.7, y:1202.2};
+const SPAWN_POINT = {x:1535.6, y:7513.8};
 
 /* Rat hazard positions — extracted from the user's blue-dot reference map,
-   scaled into 1600x1600 world space. */
-const RAT_POSITIONS = [
-[1491.6,65.3],[1060.5,78.8],[842.5,97.3],[485.3,104.7],[114.5,120.7],[1267.4,144.1],
-[1513.8,183.5],[1006.3,184.8],[1390.6,271.0],[1157.8,277.1],[824.0,288.2],[1511.3,369.5],
-[578.9,376.9],[114.5,396.6],[1255.1,415.1],[870.8,490.2],[1058.0,516.1],[1471.9,530.9],
-[257.4,585.1],[1044.5,703.3],[833.9,704.5],[98.5,732.9],[401.5,735.3],[853.6,932.4],
-[139.2,955.8],[1034.6,963.2],[695.9,990.3],[416.3,998.9],[1180.0,1043.3],[458.2,1146.7],
-[1172.6,1156.6],[716.9,1205.9],[96.1,1214.5],[1002.6,1215.7],[484.1,1325.3],[842.5,1368.4],
-[70.2,1455.9],[1008.8,1510.1],[328.9,1516.2],[727.9,1528.6],[1036.3,386.4]
-];
+   scaled into 10000x10000 world space. */
+const RAT_POSITIONS = [[9322.5,408.1],[6628.1,492.5],[5265.6,608.1],[3033.1,654.4],[715.6,754.4],[7921.3,900.6],[9461.2,1146.9],[6289.4,1155.0],[8691.2,1693.8],[7236.2,1731.9],[5150.0,1801.2],[9445.6,2309.4],[3618.1,2355.6],[715.6,2478.8],[7844.4,2594.4],[5442.5,3063.8],[6612.5,3225.6],[9199.4,3318.1],[1608.7,3656.9],[6528.1,4395.6],[5211.9,4403.1],[615.6,4580.6],[2509.4,4595.6],[5335.0,5827.5],[870.0,5973.8],[6466.2,6020.0],[4349.4,6189.4],[2601.9,6243.1],[7375.0,6520.6],[2863.8,7166.9],[7328.7,7228.7],[4480.6,7536.9],[600.6,7590.6],[6266.2,7598.1],[3025.6,8283.1],[5265.6,8552.5],[438.8,9099.4],[6305.0,9438.1],[2055.6,9476.2],[4549.4,9553.8],[6476.9,2415.0]];
 
 const ENEMY_IMG_NAMES = ['enemy1.png','enemy2.png','enemy3.png','enemy4.png'];
+
+/* ============================== WALLS ============================== */
+/* Auto-generate wall segments from shared borders between adjacent area
+   rects (they tile the map exactly, so any shared edge is an internal
+   dividing wall). Each shared border gets a centered doorway gap. */
+function buildWalls(){
+  const walls = [];
+  for (let i=0;i<AREAS.length;i++){
+    for (let j=i+1;j<AREAS.length;j++){
+      const a = AREAS[i], b = AREAS[j];
+      // vertical shared border (a's right edge touches b's left edge, or vice versa)
+      if (Math.abs((a.x+a.w) - b.x) < 0.5 || Math.abs((b.x+b.w) - a.x) < 0.5){
+        const left = (Math.abs((a.x+a.w)-b.x) < 0.5) ? a : b;
+        const right = (left===a) ? b : a;
+        const yTop = Math.max(left.y, right.y);
+        const yBot = Math.min(left.y+left.h, right.y+right.h);
+        if (yBot - yTop > 1){
+          const lineX = left.x+left.w;
+          const mid = (yTop+yBot)/2;
+          const gapHalf = WALL_GAP/2;
+          if (mid-gapHalf > yTop){
+            walls.push({x:lineX-WALL_THICKNESS/2, y:yTop, w:WALL_THICKNESS, h:(mid-gapHalf)-yTop});
+          }
+          if (yBot > mid+gapHalf){
+            walls.push({x:lineX-WALL_THICKNESS/2, y:mid+gapHalf, w:WALL_THICKNESS, h:yBot-(mid+gapHalf)});
+          }
+        }
+      }
+      // horizontal shared border
+      if (Math.abs((a.y+a.h) - b.y) < 0.5 || Math.abs((b.y+b.h) - a.y) < 0.5){
+        const top = (Math.abs((a.y+a.h)-b.y) < 0.5) ? a : b;
+        const bot = (top===a) ? b : a;
+        const xL = Math.max(top.x, bot.x);
+        const xR = Math.min(top.x+top.w, bot.x+bot.w);
+        if (xR - xL > 1){
+          const lineY = top.y+top.h;
+          const mid = (xL+xR)/2;
+          const gapHalf = WALL_GAP/2;
+          if (mid-gapHalf > xL){
+            walls.push({x:xL, y:lineY-WALL_THICKNESS/2, w:(mid-gapHalf)-xL, h:WALL_THICKNESS});
+          }
+          if (xR > mid+gapHalf){
+            walls.push({x:mid+gapHalf, y:lineY-WALL_THICKNESS/2, w:xR-(mid+gapHalf), h:WALL_THICKNESS});
+          }
+        }
+      }
+    }
+  }
+  return walls;
+}
+const WALLS = buildWalls();
+
+function resolveWalls(entity, radius){
+  for (const w of WALLS){
+    // inflate wall by entity radius (Minkowski sum) and push entity out if inside
+    const minX = w.x - radius, maxX = w.x + w.w + radius;
+    const minY = w.y - radius, maxY = w.y + w.h + radius;
+    if (entity.x > minX && entity.x < maxX && entity.y > minY && entity.y < maxY){
+      const penLeft = entity.x - minX;
+      const penRight = maxX - entity.x;
+      const penTop = entity.y - minY;
+      const penBot = maxY - entity.y;
+      const minPen = Math.min(penLeft, penRight, penTop, penBot);
+      if (minPen === penLeft) entity.x = minX;
+      else if (minPen === penRight) entity.x = maxX;
+      else if (minPen === penTop) entity.y = minY;
+      else entity.y = maxY;
+    }
+  }
+}
 
 /* ============================== STATE ============================== */
 let canvas, ctx;
@@ -234,26 +271,32 @@ let dpr = window.devicePixelRatio || 1;
 let soundOn = true;
 let gameState = 'home'; // home | playing | gameover
 let lastTime = 0;
+let zoom = 1;
 
 let hero = null;
 let bricks = [];
 let enemies = [];
 let rats = [];
-let areaStates = {}; // id -> {count, visitStart, lastTick}
+let areaStates = {};
 let score = 0;
 let camera = {x:0, y:0};
-let currentAreaFlashShown = {};
 
 let images = {};
 
-/* Joystick / throw input */
+/* Offscreen buffer reused for masked hurt-tint rendering */
+let tintCanvas = document.createElement('canvas');
+let tintCtx = tintCanvas.getContext('2d');
+
+/* Invisible joystick / throw input */
 let joyActive = false;
-let joyVec = {x:0, y:0};
 let joyPointerId = null;
-let throwHeld = false;
+let joyAnchor = {x:0,y:0};
+let joyVec = {x:0, y:0};
+const JOY_MAX_PX = 70;
+
+let throwPointerId = null;
 let throwInterval = null;
 
-/* Keyboard fallback */
 let keys = {};
 
 /* ============================== ASSET LOADING ============================== */
@@ -265,13 +308,10 @@ function loadImage(name){
     img.src = './' + name;
   });
 }
-
 async function loadAllImages(){
   const names = ['floor.jpg','hero.png','rat.png','brick.png',
     'enemy1.png','enemy2.png','enemy3.png','enemy4.png'];
-  for (const n of names){
-    images[n] = await loadImage(n);
-  }
+  for (const n of names){ images[n] = await loadImage(n); }
 }
 
 /* ============================== UTIL ============================== */
@@ -291,10 +331,7 @@ function playSound(id){
   if (!soundOn) return;
   const el = document.getElementById(id);
   if (!el) return;
-  try {
-    el.currentTime = 0;
-    el.play().catch(()=>{});
-  } catch(e){}
+  try { el.currentTime = 0; el.play().catch(()=>{}); } catch(e){}
 }
 
 /* ============================== INIT GAME ============================== */
@@ -312,12 +349,13 @@ function resetGame(){
   enemies = [];
   score = 0;
   areaStates = {};
-  currentAreaFlashShown = {};
 
   rats = RAT_POSITIONS.map(([x,y])=>({
     x, y,
     angle: Math.random()*360,
-    spin: randRange(40,90) * (Math.random()<0.5?-1:1)
+    spin: randRange(30,70) * (Math.random()<0.5?-1:1),
+    particles: [],
+    lastEmit: 0
   }));
 
   updateHUD();
@@ -327,15 +365,11 @@ function resetGame(){
 function spawnEnemyInArea(areaId){
   const rects = areaRects(areaId);
   const r = rects[Math.floor(Math.random()*rects.length)];
-  const x = randRange(r.x+20, r.x+r.w-20);
-  const y = randRange(r.y+20, r.y+r.h-20);
+  const pad = ENEMY_SIZE;
+  const x = randRange(r.x+pad, Math.max(r.x+pad, r.x+r.w-pad));
+  const y = randRange(r.y+pad, Math.max(r.y+pad, r.y+r.h-pad));
   const imgName = ENEMY_IMG_NAMES[Math.floor(Math.random()*ENEMY_IMG_NAMES.length)];
-  enemies.push({
-    x, y, img:imgName,
-    lastHitHeroAt: 0,
-    hurtUntil: 0,
-    dying:false, dieUntil:0
-  });
+  enemies.push({ x, y, img:imgName, lastHitHeroAt:0, hurtUntil:0, dying:false, dieUntil:0 });
 }
 
 function updateAreaSpawns(){
@@ -355,96 +389,57 @@ function updateAreaSpawns(){
   if (t - st.lastTick >= AREA_SPAWN_TICK_MS){
     st.lastTick = t;
     const minute = Math.floor((t - st.visitStart) / 60000) + 1;
-    for (let i=0;i<minute;i++){
-      spawnEnemyInArea(areaId);
-      st.count++;
-    }
+    for (let i=0;i<minute;i++){ spawnEnemyInArea(areaId); st.count++; }
   }
 }
 
 /* ============================== INPUT ============================== */
 function setupInput(){
-  const joyBase = document.getElementById('joystickBase');
-  const joyKnob = document.getElementById('joystickKnob');
-  const throwBtn = document.getElementById('throwBtn');
+  const moveZone = document.getElementById('moveZone');
+  const throwZone = document.getElementById('throwZone');
 
-  function layoutControls(){
-    const w = window.innerWidth, h = window.innerHeight;
-    const baseSize = 110;
-    joyBase.style.left = '24px';
-    joyBase.style.top = (h - baseSize - 30) + 'px';
-    throwBtn.style.right = '24px';
-    throwBtn.style.left = 'auto';
-    throwBtn.style.top = (h - 90 - 40) + 'px';
-  }
-  window.addEventListener('resize', layoutControls);
-  layoutControls();
-
-  function joyRect(){ return joyBase.getBoundingClientRect(); }
-
-  function handleJoyMove(clientX, clientY){
-    const rect = joyRect();
-    const cx = rect.left + rect.width/2;
-    const cy = rect.top + rect.height/2;
-    let dx = clientX - cx;
-    let dy = clientY - cy;
-    const maxR = rect.width/2;
-    const d = Math.hypot(dx,dy);
-    if (d > maxR){ dx = dx/d*maxR; dy = dy/d*maxR; }
-    joyKnob.style.left = (30 + dx) + 'px';
-    joyKnob.style.top = (30 + dy) + 'px';
-    const nd = Math.hypot(dx,dy) / maxR;
-    if (nd > 0.15){
-      joyVec.x = dx / maxR;
-      joyVec.y = dy / maxR;
-    } else {
-      joyVec.x = 0; joyVec.y = 0;
-    }
-  }
-  function resetJoy(){
-    joyActive = false; joyPointerId = null;
-    joyVec.x = 0; joyVec.y = 0;
-    joyKnob.style.left = '30px'; joyKnob.style.top = '30px';
-  }
-
-  joyBase.addEventListener('pointerdown', (e)=>{
+  moveZone.addEventListener('pointerdown', (e)=>{
     joyActive = true; joyPointerId = e.pointerId;
-    joyBase.setPointerCapture(e.pointerId);
-    handleJoyMove(e.clientX, e.clientY);
+    joyAnchor.x = e.clientX; joyAnchor.y = e.clientY;
+    joyVec.x = 0; joyVec.y = 0;
+    moveZone.setPointerCapture(e.pointerId);
   });
-  joyBase.addEventListener('pointermove', (e)=>{
-    if (joyActive && e.pointerId === joyPointerId) handleJoyMove(e.clientX, e.clientY);
+  moveZone.addEventListener('pointermove', (e)=>{
+    if (!joyActive || e.pointerId !== joyPointerId) return;
+    let dx = e.clientX - joyAnchor.x;
+    let dy = e.clientY - joyAnchor.y;
+    const d = Math.hypot(dx,dy);
+    if (d > JOY_MAX_PX){ dx = dx/d*JOY_MAX_PX; dy = dy/d*JOY_MAX_PX; }
+    const nd = d / JOY_MAX_PX;
+    if (nd > 0.12){ joyVec.x = dx/JOY_MAX_PX; joyVec.y = dy/JOY_MAX_PX; }
+    else { joyVec.x = 0; joyVec.y = 0; }
   });
-  joyBase.addEventListener('pointerup', resetJoy);
-  joyBase.addEventListener('pointercancel', resetJoy);
+  function resetJoy(){ joyActive=false; joyPointerId=null; joyVec.x=0; joyVec.y=0; }
+  moveZone.addEventListener('pointerup', resetJoy);
+  moveZone.addEventListener('pointercancel', resetJoy);
 
-  function doThrow(){
-    if (gameState !== 'playing') return;
-    throwBrick();
-  }
-  throwBtn.addEventListener('pointerdown', (e)=>{
+  function doThrow(){ if (gameState==='playing') throwBrick(); }
+  throwZone.addEventListener('pointerdown', (e)=>{
     e.preventDefault();
-    throwHeld = true;
+    throwPointerId = e.pointerId;
     doThrow();
     throwInterval = setInterval(doThrow, 130);
   });
-  function stopThrow(){
-    throwHeld = false;
-    if (throwInterval){ clearInterval(throwInterval); throwInterval = null; }
+  function stopThrow(e){
+    if (throwPointerId !== null && e.pointerId !== throwPointerId) return;
+    throwPointerId = null;
+    if (throwInterval){ clearInterval(throwInterval); throwInterval=null; }
   }
-  throwBtn.addEventListener('pointerup', stopThrow);
-  throwBtn.addEventListener('pointerleave', stopThrow);
-  throwBtn.addEventListener('pointercancel', stopThrow);
+  throwZone.addEventListener('pointerup', stopThrow);
+  throwZone.addEventListener('pointercancel', stopThrow);
+  throwZone.addEventListener('pointerleave', stopThrow);
 
-  // Desktop keyboard fallback
+  // Permanent keyboard controls for desktop — always active regardless of touch.
   window.addEventListener('keydown', (e)=>{
     keys[e.key.toLowerCase()] = true;
     if (e.code === 'Space'){ e.preventDefault(); doThrow(); }
   });
   window.addEventListener('keyup', (e)=>{ keys[e.key.toLowerCase()] = false; });
-  window.addEventListener('click', ()=>{
-    if (gameState === 'playing') doThrow();
-  });
 }
 
 function getMoveVector(){
@@ -464,12 +459,36 @@ function getMoveVector(){
 /* ============================== BRICKS ============================== */
 function throwBrick(){
   playSound('sndThrow');
-  bricks.push({
-    x: hero.x, y: hero.y,
-    dx: hero.facing.x, dy: hero.facing.y,
-    traveled: 0,
-    rot: 0
-  });
+  bricks.push({ x: hero.x, y: hero.y, dx: hero.facing.x, dy: hero.facing.y, traveled:0, rot:0 });
+}
+
+/* ============================== RAT MIST PARTICLES ============================== */
+/* Pixelated, opaque-purple, actively-spraying jet — particles are emitted
+   continuously from the rat and fly outward, rotating with the rat. */
+const MIST_EMIT_INTERVAL = 16; // ms between particle bursts
+const MIST_PARTICLE_LIFE = 650; // ms to travel out to full radius
+function updateRatParticles(rat, dt){
+  const t = now();
+  if (t - rat.lastEmit > MIST_EMIT_INTERVAL){
+    rat.lastEmit = t;
+    // emit a small burst in the rat's current facing arc, full circle over time due to rotation
+    for (let i=0;i<2;i++){
+      const spread = randRange(-35,35);
+      const ang = (rat.angle + spread) * Math.PI/180;
+      rat.particles.push({
+        ang, dist:0,
+        speed: randRange(0.85,1.15),
+        size: randRange(10,18),
+        born: t
+      });
+    }
+  }
+  for (let i=rat.particles.length-1;i>=0;i--){
+    const p = rat.particles[i];
+    const age = t - p.born;
+    if (age > MIST_PARTICLE_LIFE){ rat.particles.splice(i,1); continue; }
+    p.dist = (age/MIST_PARTICLE_LIFE) * RAT_MIST_RADIUS * p.speed;
+  }
 }
 
 /* ============================== UPDATE ============================== */
@@ -487,19 +506,19 @@ function update(dt){
   }
   hero.x = clamp(hero.x, HERO_SIZE/2, WORLD_SIZE - HERO_SIZE/2);
   hero.y = clamp(hero.y, HERO_SIZE/2, WORLD_SIZE - HERO_SIZE/2);
+  resolveWalls(hero, HERO_SIZE*0.35);
 
   updateAreaSpawns();
-  showAreaFlashIfNeeded();
 
   // rats
   let insideMistRat = null;
   for (const rat of rats){
     rat.angle += rat.spin * dt;
+    updateRatParticles(rat, dt);
     const d = dist(hero.x,hero.y, rat.x,rat.y);
-    if (d < RAT_BODY_RADIUS + HERO_SIZE/2){
-      // physical push — shove hero to just outside body radius
+    if (d < RAT_BODY_RADIUS + HERO_SIZE*0.35){
       const ang = Math.atan2(hero.y-rat.y, hero.x-rat.x) || Math.random()*Math.PI*2;
-      const pushR = RAT_BODY_RADIUS + HERO_SIZE/2 + 1;
+      const pushR = RAT_BODY_RADIUS + HERO_SIZE*0.35 + 1;
       hero.x = rat.x + Math.cos(ang)*pushR;
       hero.y = rat.y + Math.sin(ang)*pushR;
     } else if (d < RAT_MIST_RADIUS){
@@ -527,13 +546,15 @@ function update(dt){
     let hit = false;
     for (const en of enemies){
       if (en.dying) continue;
-      if (dist(b.x,b.y, en.x,en.y) < (BRICK_SIZE/2 + ENEMY_SIZE/2)){
-        killEnemy(en);
-        hit = true;
-        break;
+      if (dist(b.x,b.y, en.x,en.y) < (BRICK_SIZE*0.4 + ENEMY_SIZE*0.4)){
+        killEnemy(en); hit = true; break;
       }
     }
-    if (hit || b.traveled > BRICK_MAX_DIST || b.x<0||b.x>WORLD_SIZE||b.y<0||b.y>WORLD_SIZE){
+    let blocked = false;
+    for (const w of WALLS){
+      if (b.x > w.x && b.x < w.x+w.w && b.y > w.y && b.y < w.y+w.h){ blocked = true; break; }
+    }
+    if (hit || blocked || b.traveled > BRICK_MAX_DIST || b.x<0||b.x>WORLD_SIZE||b.y<0||b.y>WORLD_SIZE){
       bricks.splice(i,1);
     }
   }
@@ -548,18 +569,24 @@ function update(dt){
     }
     const d = dist(en.x,en.y, hero.x,hero.y);
     if (d > 1){
-      en.x += (hero.x-en.x)/d * ENEMY_SPEED * dt;
-      en.y += (hero.y-en.y)/d * ENEMY_SPEED * dt;
+      const nx = en.x + (hero.x-en.x)/d * ENEMY_SPEED * dt;
+      const ny = en.y + (hero.y-en.y)/d * ENEMY_SPEED * dt;
+      en.x = nx; en.y = ny;
     }
-    if (d < (ENEMY_SIZE/2 + HERO_SIZE/2) && t - en.lastHitHeroAt > ENEMY_TOUCH_COOLDOWN){
+    resolveWalls(en, ENEMY_SIZE*0.35);
+    if (d < (ENEMY_SIZE*0.4 + HERO_SIZE*0.4) && t - en.lastHitHeroAt > ENEMY_TOUCH_COOLDOWN){
       en.lastHitHeroAt = t;
       damageHero(ENEMY_TOUCH_DAMAGE);
     }
   }
 
-  // camera follows hero, clamped to world bounds
-  camera.x = clamp(hero.x - canvas.width/(2*dpr), 0, WORLD_SIZE - canvas.width/dpr);
-  camera.y = clamp(hero.y - canvas.height/(2*dpr), 0, WORLD_SIZE - canvas.height/dpr);
+  // camera / zoom — visible width in world-units is fixed (FOV_WORLD_WIDTH),
+  // so entities appear consistently large regardless of the huge map.
+  const screenW = canvas.width/dpr, screenH = canvas.height/dpr;
+  zoom = screenW / FOV_WORLD_WIDTH;
+  const fovWorldH = screenH / zoom;
+  camera.x = clamp(hero.x - FOV_WORLD_WIDTH/2, 0, Math.max(0, WORLD_SIZE - FOV_WORLD_WIDTH));
+  camera.y = clamp(hero.y - fovWorldH/2, 0, Math.max(0, WORLD_SIZE - fovWorldH));
 
   updateHUD();
 }
@@ -597,13 +624,14 @@ function updateHUD(){
   document.getElementById('scoreVal').textContent = score;
 }
 
-const AREA_LABELS_ORDER = null; // no title cards per design — kept minimal
-function showAreaFlashIfNeeded(){
-  // Intentionally minimal: no area-name popups (dropped from scope).
-}
-
 /* ============================== RENDER ============================== */
-function drawEntityWithHurtFlash(img, x, y, size, rotationDeg, hurtUntil){
+/* Draws a sprite with a properly-masked red hurt-tint. The tint is composited
+   on an offscreen buffer (which starts fully transparent) so 'source-atop'
+   only paints where the sprite itself is opaque — painting straight onto the
+   main canvas would tint a full square, since source-atop there reads the
+   alpha of everything already drawn underneath (the opaque floor), not just
+   this sprite. */
+function drawSprite(img, screenX, screenY, screenSize, rotationDeg, hurtUntil, extraAlpha){
   const t = now();
   const isHurt = t < hurtUntil;
   let scale = 1;
@@ -611,107 +639,126 @@ function drawEntityWithHurtFlash(img, x, y, size, rotationDeg, hurtUntil){
     const remain = (hurtUntil - t) / HURT_FLASH_MS;
     scale = 1 + 0.35 * remain;
   }
+  const drawSize = screenSize * scale;
+
   ctx.save();
-  ctx.translate(x - camera.x, y - camera.y);
+  ctx.globalAlpha = extraAlpha !== undefined ? extraAlpha : 1;
+  ctx.translate(screenX, screenY);
   if (rotationDeg) ctx.rotate(rotationDeg * Math.PI/180);
-  ctx.scale(scale, scale);
+
   if (img){
-    ctx.drawImage(img, -size/2, -size/2, size, size);
     if (isHurt){
-      ctx.globalCompositeOperation = 'source-atop';
-      ctx.fillStyle = 'rgba(255,0,0,0.55)';
-      ctx.fillRect(-size/2, -size/2, size, size);
-      ctx.globalCompositeOperation = 'source-over';
+      const bufSize = Math.max(4, Math.ceil(drawSize));
+      if (tintCanvas.width !== bufSize || tintCanvas.height !== bufSize){
+        tintCanvas.width = bufSize; tintCanvas.height = bufSize;
+      }
+      tintCtx.clearRect(0,0,bufSize,bufSize);
+      tintCtx.globalCompositeOperation = 'source-over';
+      tintCtx.drawImage(img, 0, 0, bufSize, bufSize);
+      tintCtx.globalCompositeOperation = 'source-atop';
+      const remain = (hurtUntil - t) / HURT_FLASH_MS;
+      tintCtx.fillStyle = 'rgba(255,20,20,' + (0.45 + 0.4*remain) + ')';
+      tintCtx.fillRect(0,0,bufSize,bufSize);
+      tintCtx.globalCompositeOperation = 'source-over';
+      ctx.drawImage(tintCanvas, -drawSize/2, -drawSize/2, drawSize, drawSize);
+    } else {
+      ctx.drawImage(img, -drawSize/2, -drawSize/2, drawSize, drawSize);
     }
   } else {
     ctx.fillStyle = isHurt ? '#ff3333' : '#888';
-    ctx.beginPath();
-    ctx.arc(0,0,size/2,0,Math.PI*2);
-    ctx.fill();
+    ctx.beginPath(); ctx.arc(0,0,drawSize/2,0,Math.PI*2); ctx.fill();
   }
   ctx.restore();
+}
+
+function worldToScreen(wx, wy){
+  return { x:(wx-camera.x)*zoom, y:(wy-camera.y)*zoom };
 }
 
 function render(){
   const w = canvas.width/dpr, h = canvas.height/dpr;
   ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0,0,w,h);
+  if (gameState !== 'playing') return;
 
-  if (gameState !== 'playing'){ return; }
-
-  // floor background
+  // floor background, drawn at zoomed scale
   if (images['floor.jpg']){
-    ctx.drawImage(images['floor.jpg'], -camera.x, -camera.y, WORLD_SIZE, WORLD_SIZE);
+    const sx0 = camera.x / WORLD_SIZE * images['floor.jpg'].width;
+    const sy0 = camera.y / WORLD_SIZE * images['floor.jpg'].height;
+    const sw = (w/zoom) / WORLD_SIZE * images['floor.jpg'].width;
+    const sh = (h/zoom) / WORLD_SIZE * images['floor.jpg'].height;
+    ctx.drawImage(images['floor.jpg'], sx0, sy0, sw, sh, 0, 0, w, h);
   } else {
-    ctx.fillStyle = '#222';
-    ctx.fillRect(0,0,w,h);
+    ctx.fillStyle = '#222'; ctx.fillRect(0,0,w,h);
   }
 
-  // rats + mist
-  for (const rat of rats){
-    const sx = rat.x - camera.x, sy = rat.y - camera.y;
-    if (sx < -150 || sx > w+150 || sy < -150 || sy > h+150) continue;
-    const pulse = 1 + 0.06*Math.sin(now()/300 + rat.x);
-    const grad = ctx.createRadialGradient(sx,sy,4, sx,sy, RAT_MIST_RADIUS*pulse);
-    grad.addColorStop(0, 'rgba(140,255,150,0.35)');
-    grad.addColorStop(0.6, 'rgba(120,255,180,0.16)');
-    grad.addColorStop(1, 'rgba(120,255,180,0)');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(sx,sy, RAT_MIST_RADIUS*pulse, 0, Math.PI*2);
-    ctx.fill();
+  // walls (visible so players can see what's blocking them)
+  ctx.fillStyle = 'rgba(120,50,30,0.55)';
+  for (const wl of WALLS){
+    const p = worldToScreen(wl.x, wl.y);
+    const pw = wl.w*zoom, ph = wl.h*zoom;
+    if (p.x+pw < 0 || p.x > w || p.y+ph < 0 || p.y > h) continue;
+    ctx.fillRect(p.x, p.y, pw, ph);
+  }
 
-    ctx.save();
-    ctx.translate(sx,sy);
-    ctx.rotate(rat.angle * Math.PI/180);
-    if (images['rat.png']){
-      ctx.drawImage(images['rat.png'], -RAT_SIZE, -RAT_SIZE/2, RAT_SIZE*2, RAT_SIZE);
-    } else {
-      ctx.fillStyle = '#553322';
-      ctx.beginPath(); ctx.arc(0,0,RAT_SIZE/2,0,Math.PI*2); ctx.fill();
+  // rats + pixelated purple spray-jet mist
+  const prevSmoothing = ctx.imageSmoothingEnabled;
+  for (const rat of rats){
+    const p = worldToScreen(rat.x, rat.y);
+    if (p.x < -400 || p.x > w+400 || p.y < -400 || p.y > h+400) continue;
+
+    ctx.imageSmoothingEnabled = false;
+    for (const part of rat.particles){
+      const px = rat.x + Math.cos(part.ang)*part.dist;
+      const py = rat.y + Math.sin(part.ang)*part.dist;
+      const sp = worldToScreen(px,py);
+      const lifeFrac = 1 - (part.dist / RAT_MIST_RADIUS);
+      const psize = Math.max(2, part.size*zoom*0.7);
+      ctx.globalAlpha = clamp(0.55 + 0.4*lifeFrac, 0, 0.95);
+      ctx.fillStyle = '#7a1fb0';
+      ctx.fillRect(Math.round(sp.x-psize/2), Math.round(sp.y-psize/2), Math.ceil(psize), Math.ceil(psize));
+      ctx.globalAlpha = clamp(0.35 + 0.3*lifeFrac, 0, 0.7);
+      ctx.fillStyle = '#c060ff';
+      const inner = psize*0.55;
+      ctx.fillRect(Math.round(sp.x-inner/2), Math.round(sp.y-inner/2), Math.ceil(inner), Math.ceil(inner));
     }
-    ctx.restore();
+    ctx.globalAlpha = 1;
+    ctx.imageSmoothingEnabled = prevSmoothing;
+
+    drawSprite(images['rat.png'], p.x, p.y, RAT_SIZE*2*zoom, rat.angle, 0);
   }
 
   // enemies
   for (const en of enemies){
-    const sx = en.x - camera.x, sy = en.y - camera.y;
-    if (sx < -80 || sx > w+80 || sy < -80 || sy > h+80) continue;
-    let size = ENEMY_SIZE;
+    const p = worldToScreen(en.x, en.y);
+    if (p.x < -200 || p.x > w+200 || p.y < -200 || p.y > h+200) continue;
+    let sizePx = ENEMY_SIZE*zoom;
+    let alpha = 1;
     if (en.dying){
       const remain = Math.max(0, en.dieUntil - now())/180;
-      size = ENEMY_SIZE * (1 + 0.8*(1-remain));
-      ctx.save();
-      ctx.globalAlpha = remain;
-      drawEntityWithHurtFlash(images[en.img], en.x, en.y, size, 0, en.hurtUntil);
-      ctx.restore();
-    } else {
-      drawEntityWithHurtFlash(images[en.img], en.x, en.y, size, 0, en.hurtUntil);
+      sizePx = ENEMY_SIZE*zoom * (1 + 0.8*(1-remain));
+      alpha = remain;
     }
+    drawSprite(images[en.img], p.x, p.y, sizePx, 0, en.hurtUntil, alpha);
   }
 
   // bricks
   for (const b of bricks){
-    const sx = b.x - camera.x, sy = b.y - camera.y;
+    const p = worldToScreen(b.x, b.y);
     ctx.save();
-    ctx.translate(sx,sy);
+    ctx.translate(p.x, p.y);
     ctx.rotate(b.rot * Math.PI/180);
-    if (images['brick.png']){
-      ctx.drawImage(images['brick.png'], -BRICK_SIZE/2, -BRICK_SIZE/2, BRICK_SIZE, BRICK_SIZE);
-    } else {
-      ctx.fillStyle = '#b5541e';
-      ctx.fillRect(-BRICK_SIZE/2,-BRICK_SIZE/2,BRICK_SIZE,BRICK_SIZE);
-    }
+    const bs = BRICK_SIZE*zoom;
+    if (images['brick.png']) ctx.drawImage(images['brick.png'], -bs/2, -bs/2, bs, bs);
+    else { ctx.fillStyle = '#b5541e'; ctx.fillRect(-bs/2,-bs/2,bs,bs); }
     ctx.restore();
   }
 
   // hero
   const heroAngle = Math.atan2(hero.facing.y, hero.facing.x) * 180/Math.PI + 90;
-  const bob = hero.moving ? Math.sin(now()/90)*2 : Math.sin(now()/500)*1.5;
-  ctx.save();
-  ctx.translate(0, bob);
-  drawEntityWithHurtFlash(images['hero.png'], hero.x, hero.y, HERO_SIZE, heroAngle, hero.hurtUntil);
-  ctx.restore();
+  const bob = hero.moving ? Math.sin(now()/90)*2*zoom*0.3 : Math.sin(now()/500)*1.5*zoom*0.3;
+  const hp = worldToScreen(hero.x, hero.y);
+  drawSprite(images['hero.png'], hp.x, hp.y+bob, HERO_SIZE*zoom, heroAngle, hero.hurtUntil);
 }
 
 /* ============================== MAIN LOOP ============================== */
@@ -734,40 +781,18 @@ function resizeCanvas(){
 }
 
 /* ============================== UI WIRING ============================== */
-function showScreen(id){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
-  if (id) document.getElementById(id).classList.remove('hidden');
-}
-
 function startGame(){
   resetGame();
   gameState = 'playing';
   document.getElementById('homeScreen').classList.add('hidden');
   document.getElementById('gameOverScreen').classList.remove('active');
   document.getElementById('gameScreen').classList.add('active');
-  const intro = document.getElementById('sndIntro');
-  intro.pause();
-}
-
-function backToHome(){
-  gameState = 'home';
-  document.getElementById('gameScreen').classList.remove('active');
-  document.getElementById('gameOverScreen').classList.remove('active');
-  document.getElementById('homeScreen').classList.remove('hidden');
-  if (soundOn){
-    const intro = document.getElementById('sndIntro');
-    intro.play().catch(()=>{});
-  }
+  document.getElementById('sndIntro').pause();
 }
 
 function wireUI(){
-  document.getElementById('playBtn').addEventListener('click', ()=>{
-    if (soundOn){
-      const intro = document.getElementById('sndIntro');
-      intro.pause();
-    }
-    startGame();
-  });
+  document.getElementById('playBtn').addEventListener('click', startGame);
+  document.getElementById('replayBtnHome').addEventListener('click', startGame);
   document.getElementById('replayBtn').addEventListener('click', startGame);
 
   function openSettings(){ document.getElementById('settingsPanel').classList.remove('hidden'); }
@@ -805,7 +830,6 @@ async function boot(){
   await loadAllImages();
   requestAnimationFrame(loop);
 
-  // try to start intro music on first user interaction (autoplay policy)
   document.body.addEventListener('pointerdown', function once(){
     if (soundOn && gameState==='home'){
       document.getElementById('sndIntro').play().catch(()=>{});
