@@ -156,6 +156,9 @@ const BRICK_SIZE = 130;
 const BRICK_SPEED = HERO_SPEED * 2;
 const BRICK_SPIN_DEG_PER_SEC = 900;
 const BRICK_MAX_DIST = 3500;
+/* How long a thrown projectile keeps spinning in place after hitting a
+   wall, before it despawns, instead of vanishing on impact. */
+const STUCK_PROJECTILE_MS = 10000;
 const ENEMY_SIZE = 160;
 const ENEMY_SPEED = 325;
 const ENEMY_TOUCH_DAMAGE = 1;
@@ -472,7 +475,8 @@ function throwProjectile(){
   playSound('sndThrow');
   bricks.push({
     x: hero.x, y: hero.y, dx: hero.facing.x, dy: hero.facing.y, traveled:0, rot:0,
-    kind: hero.weapon, damage: WEAPON_DAMAGE[hero.weapon]
+    kind: hero.weapon, damage: WEAPON_DAMAGE[hero.weapon],
+    stuck: false, stuckSince: 0
   });
 }
 
@@ -586,9 +590,19 @@ function update(dt){
     hero.currentMistRat = null;
   }
 
-  // bricks
+  // bricks (thrown stones/bricks — either flying, or stuck-and-spinning
+  // against a wall for a while before despawning)
   for (let i=bricks.length-1; i>=0; i--){
     const b = bricks[i];
+    if (b.stuck){
+      // stopped in place, but keeps spinning until its timer runs out
+      b.rot += BRICK_SPIN_DEG_PER_SEC * dt;
+      if (now() - b.stuckSince > STUCK_PROJECTILE_MS){
+        bricks.splice(i,1);
+      }
+      continue;
+    }
+
     b.x += b.dx * BRICK_SPEED * dt;
     b.y += b.dy * BRICK_SPEED * dt;
     b.rot += BRICK_SPIN_DEG_PER_SEC * dt;
@@ -604,8 +618,15 @@ function update(dt){
     for (const w of WALLS){
       if (b.x > w.x && b.x < w.x+w.w && b.y > w.y && b.y < w.y+w.h){ blocked = true; break; }
     }
-    if (hit || blocked || b.traveled > BRICK_MAX_DIST || b.x<0||b.x>WORLD_SIZE||b.y<0||b.y>WORLD_SIZE){
+    if (hit || b.traveled > BRICK_MAX_DIST || b.x<0||b.x>WORLD_SIZE||b.y<0||b.y>WORLD_SIZE){
       bricks.splice(i,1);
+    } else if (blocked){
+      // back up out of the wall slightly so it doesn't visually clip inside it,
+      // then stick there and keep spinning instead of disappearing
+      b.x -= b.dx * BRICK_SPEED * dt;
+      b.y -= b.dy * BRICK_SPEED * dt;
+      b.stuck = true;
+      b.stuckSince = now();
     }
   }
 
