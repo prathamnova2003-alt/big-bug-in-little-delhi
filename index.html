@@ -134,6 +134,7 @@
 <audio id="sndEnemyDeath" preload="none"><source src="./enemy_death.mp3" type="audio/mpeg"></audio>
 <audio id="sndHeroHit" preload="none"><source src="./hero_hit.mp3" type="audio/mpeg"></audio>
 <audio id="sndHeroDeath" preload="none"><source src="./hero_death.mp3" type="audio/mpeg"></audio>
+<audio id="sndMove" loop preload="none"><source src="./move.mp3" type="audio/mpeg"></audio>
 
 <script>
 (function(){
@@ -284,6 +285,7 @@ let bricks = [];
 let enemies = [];
 let rats = [];
 let pickups = [];
+let heroWasMoving = false;
 let areaStates = {};
 let score = 0;
 let camera = {x:0, y:0};
@@ -549,6 +551,15 @@ function update(dt){
 
   const mv = getMoveVector();
   hero.moving = (Math.abs(mv.x)>0.01 || Math.abs(mv.y)>0.01);
+  if (hero.moving !== heroWasMoving){
+    heroWasMoving = hero.moving;
+    const moveSnd = document.getElementById('sndMove');
+    if (hero.moving){
+      if (soundOn) moveSnd.play().catch(()=>{});
+    } else {
+      moveSnd.pause();
+    }
+  }
   if (hero.moving){
     hero.x += mv.x * HERO_SPEED * dt;
     hero.y += mv.y * HERO_SPEED * dt;
@@ -708,6 +719,8 @@ function killEnemy(en){
 function endGame(){
   gameState = 'gameover';
   playSound('sndHeroDeath');
+  document.getElementById('sndMove').pause();
+  heroWasMoving = false;
   document.getElementById('finalScore').textContent = 'Kills: ' + score;
   document.getElementById('gameOverScreen').classList.add('active');
 }
@@ -920,6 +933,8 @@ function startGame(){
   document.getElementById('gameOverScreen').classList.remove('active');
   document.getElementById('gameScreen').classList.add('active');
   document.getElementById('sndIntro').pause();
+  document.getElementById('sndMove').pause();
+  heroWasMoving = false;
 }
 
 function wireUI(){
@@ -941,6 +956,9 @@ function wireUI(){
     const intro = document.getElementById('sndIntro');
     if (!soundOn) intro.pause();
     else if (gameState==='home') intro.play().catch(()=>{});
+    const moveSnd = document.getElementById('sndMove');
+    if (!soundOn) moveSnd.pause();
+    else if (gameState==='playing' && hero && hero.moving) moveSnd.play().catch(()=>{});
   });
 
   document.getElementById('terrorBtn').addEventListener('click', ()=>{
